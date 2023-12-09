@@ -33,13 +33,17 @@ module main_control(
 
 reg score_checker1;
 reg score_checker2;
-reg [3:0] player1_score;
-reg [3:0] player2_score;
+reg [3:0] player1_score_0;
+reg [3:0] player1_score_1;
+reg [3:0] player2_score_0;
+reg [3:0] player2_score_1;
 
 initial 
                         begin : process_0
-                        player1_score = 'b0000;   
-                        player2_score = 'b0000;
+                        player1_score_0 = 'b0000;
+                        player1_score_1 = 'b0000;
+                        player2_score_0 = 'b0000;
+                        player2_score_1 = 'b0000;
                         score_checker1 = 0;
                         score_checker2 = 0;
                         end
@@ -67,22 +71,36 @@ sync_mod(clk_50, reset, start, y_control, x_control, horizontal_sync, vertical_s
 //if score checker1 is enabled that means player 1(topbar) scored, so update  his score
 always_ff @(posedge clk_50, posedge reset)
 begin
-    if (player1_score == 9 || reset == 1)
-        player1_score <= 0;
-    else if (score_checker1 == 1)
-        player1_score++;
+    if (reset == 1) begin
+        player1_score_0 <= 0;
+        player1_score_1 <= 0;
+    end else if (score_checker1 == 1) begin
+        if (player1_score_0 == 9) begin
+            player1_score_0 <= 0;
+            player1_score_1 <= player1_score_1 + 1;
+        end else begin
+            player1_score_0 <= player1_score_0 + 1;
+        end
+    end
 end
 
 //if score checker2 is enabled that means player2 (bottom bar) scored, so update his score
 always_ff @(posedge clk_50, posedge reset)
 begin
-    if (player2_score == 9 || reset == 1)
-        player2_score <= 0;
-    else if (score_checker2 == 1)
-        player2_score++;
+    if (reset == 1) begin
+        player2_score_0 <= 0;
+        player2_score_1 <= 0;
+    end else if (score_checker2 == 1) begin
+        if (player2_score_0 == 9) begin
+            player2_score_0 <= 0;
+            player2_score_1 <= player2_score_1 + 1;
+        end else begin
+            player2_score_0 <= player2_score_0 + 1;
+        end
+    end
 end
 
 //Module to display the scores on the 7seg display of basys3
-SevenSegment(clk_50,player1_score,'b0000,'b0000,player2_score,a, b, c, d, e, f, g, dp,an);
+SevenSegment(clk_50, player1_score_0, player1_score_1, player2_score_0, player2_score_1, a, b, c, d, e, f, g, dp,an);
 
 endmodule
