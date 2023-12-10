@@ -29,7 +29,10 @@ module main_control(
     output logic horizontal_sync,
     output logic vertical_sync,
     output a, b, c, d, e, f, g, dp,
-                     output [3:0] an  ); 
+    output [3:0] an,
+    output wire RsTx, //uart
+    input wire RsRx //uart
+     ); 
 
 reg score_checker1;
 reg score_checker2;
@@ -58,15 +61,43 @@ reg video_on;
 //signal clk_50 :std_logic;
 reg clk_50;
 
+reg [7:0] data_in;
+wire [7:0] data_out;
+reg bbl, bbr, tbl, tbr;
 
 //Vivado CLK wizzard to create 50MHz clock 
 clk_wiz_0(clk_50, reset, clk);
 
+uart(clk, data_in, data_out, RsRx, RsTx);
+
 //Module to create animations
-anim_gen(clk_50, reset, x_control,start_ball, bottom_button_l, bottom_button_r,top_button_l,top_button_r, y_control, video_on, rgb, score_checker1, score_checker2);
+anim_gen(clk_50, reset, x_control,start_ball, bbl || bottom_button_l, bbr || bottom_button_r, tbl || top_button_l, tbr || top_button_r, y_control, video_on, rgb, score_checker1, score_checker2);
 
 //vga synchronization module to update changing pixels and refresh the display
 sync_mod(clk_50, reset, start, y_control, x_control, horizontal_sync, vertical_sync, video_on);
+
+always_ff @(posedge clk)
+begin
+    if (data_in === 8'h74) begin
+        bbl <= 0;
+        bbr <= 0;
+    end else if (data_in === 8'h62) begin
+        bbl <= 1;
+        bbr <= 0;
+    end else if (data_in == 8'h65) begin
+        bbl <= 0;
+        bbr <= 1;
+    end else if (data_in == 8'h6c) begin
+        tbl <= 0;
+        tbr <= 0;
+    end else if (data_in == 8'h6b) begin
+        tbl <= 1;
+        tbr <= 0;
+    end else if (data_in == 8'h6d) begin
+        tbl <= 0;
+        tbr <= 1;
+    end
+end
 
 //if score checker1 is enabled that means player 1(topbar) scored, so update  his score
 always_ff @(posedge clk_50, posedge reset)
@@ -102,5 +133,6 @@ end
 
 //Module to display the scores on the 7seg display of basys3
 SevenSegment(clk_50, player1_score_0, player1_score_1, player2_score_0, player2_score_1, a, b, c, d, e, f, g, dp,an);
+// SevenSegment(clk_50, data_in[3:0], data_in[7:4], data_out[3:0], data_out[7:4], a, b, c, d, e, f, g, dp,an);
 
 endmodule
